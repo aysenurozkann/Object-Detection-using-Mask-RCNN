@@ -128,35 +128,30 @@ class_dict = {
 }
 
 
-def find_barcode(image, frame_name, n_instances):
+def find_barcode(image):
+    num_barcode = []  
     if decode(image):
-        num_barcode = []
         for barcode in decode(image):
             pts = np.array([barcode.polygon], np.int32)
             pts = pts.reshape((-1, 1, 2))
             cv2.polylines(image, [pts], True, (0, 255, 0), 5)
 
             num_barcode.append([barcode.data])
-        print(f"{frame_name} : {len(num_barcode)} Detected barcodes.")
-        print(f"{frame_name} : {n_instances-len(num_barcode)} Objects barcodes not found")
-    else:
-        print(f"{frame_name} : Objects barcodes not found")
-    return image
+
+    return len(num_barcode)
 
 
 def display_instances(image, frame_name, boxes, masks, ids, names, scores):
     """
         take the image and results and apply the mask, box, and Label
     """
-    num_object = 0
     n_instances = boxes.shape[0]
 
     if not n_instances:
-        print(f'{frame_name} : NO INSTANCES TO DISPLAY')
+        print('NO INSTANCES TO DISPLAY')
     else:
         assert boxes.shape[0] == masks.shape[-1] == ids.shape[0]        
 
-    detected_list = []
     for i in range(n_instances):
 
         if not np.any(boxes[i]):
@@ -168,20 +163,15 @@ def display_instances(image, frame_name, boxes, masks, ids, names, scores):
         color = class_dict[label]
         score = round(scores[i]*100, 2) if scores is not None else None
 
-        if score >= 99.00:
-            num_object += 1
-            detected_list.append(label)
-
-        else:
-            print(f"{frame_name} : Predicted {label}-%{score}")
-
         caption = '{} {:.2f}'.format(label, score) if score else label
         mask = masks[:, :, i]
         image = apply_mask(image, mask, color)
         image = cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 1)
         image = cv2.putText(
             image, caption, (x1, y1), cv2.FONT_HERSHEY_PLAIN, 0.75, (0, 0, 0), 1)
-    find_barcode(image, frame_name, n_instances)    
-    print(f"{frame_name} : {num_object} Detected objects.", *detected_list)
+        image = cv2.putText(image, f'Number of objects: {n_instances}', \
+            (0, 25), cv2.FONT_HERSHEY_PLAIN, 1, (100, 0, 255), 1)
+    num_barcode = find_barcode(image)
+    # cv2.putText(image, f'Number of barcodes: {num_barcode}', (50, 50), cv2.FONT_HERSHEY_PLAIN, 1, (100, 0, 255), 1)    
 
     return image
